@@ -54,7 +54,7 @@ async def start(client, message):
          InlineKeyboardButton("💬 सपोर्ट ग्रुप", url="https://t.me/sanatani_support")]
     ])
     caption = "🙋‍♂️ **नमस्ते! मैं आपका चैटबॉट हूँ।**\nमुझसे बात करें, इमेज मंगवाएं और बहुत कुछ।"
-    await message.reply_photo(photo="https://your_image_url.com/welcome.jpg", caption=caption, reply_markup=buttons)
+    await message.reply_photo(photo="https://files.catbox.moe/8dtq6s.jpg", caption=caption, reply_markup=buttons)
 
 @app.on_callback_query(filters.regex("help"))
 async def help_callback(client, callback_query):
