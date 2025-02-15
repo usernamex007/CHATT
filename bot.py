@@ -1,7 +1,7 @@
 import os
 import aiohttp
-import asyncio
 from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatAction
 from gtts import gTTS
 from datetime import datetime
@@ -45,6 +45,22 @@ async def chatbot_reply(message_text):
                 return data.get("data")
             return "मुझे जवाब नहीं मिला!"
 
+@app.on_message(filters.command("start"))
+async def start(client, message):
+    buttons = InlineKeyboardMarkup([
+        [InlineKeyboardButton("❓ मदद", callback_data="help"),
+         InlineKeyboardButton("👨‍💻 Owner", url="https://t.me/its_nexio")],
+        [InlineKeyboardButton("📢 सपोर्ट चैनल", url="https://t.me/sanatani_tech"),
+         InlineKeyboardButton("💬 सपोर्ट ग्रुप", url="https://t.me/sanatani_support")]
+    ])
+    caption = "🙋‍♂️ **नमस्ते! मैं आपका चैटबॉट हूँ।**\nमुझसे बात करें, इमेज मंगवाएं और बहुत कुछ।"
+    await message.reply_photo(photo="https://your_image_url.com/welcome.jpg", caption=caption, reply_markup=buttons)
+
+@app.on_callback_query(filters.regex("help"))
+async def help_callback(client, callback_query):
+    help_text = "**बॉट के कमांड्स:**\n- *बोल के बताओ* — वॉइस में जवाब\n- *तस्वीर* — इमेज भेजे\n- बाकी टेक्स्ट के लिए नार्मल चैट।"
+    await callback_query.message.edit_text(help_text)
+
 @app.on_message(filters.text & ~filters.command(["start", "help"]))
 async def chatbot(client, message):
     chat_id = message.chat.id
@@ -61,8 +77,9 @@ async def chatbot(client, message):
     else:
         reply = await chatbot_reply(user_message)
         await message.reply_text(reply)
-        await send_voice_reply(message, reply)
+        if any(word in user_message for word in ["बोल के बताओ", "आवाज़ में बताओ", "voice में बताओ"]):
+            await send_voice_reply(message, reply)
         await save_history(chat_id, user_message, reply)
 
-print("Bot Started with History, Images & Voice!")
+print("Bot Started with Start Buttons, History, Images & Conditional Voice!")
 app.run()
