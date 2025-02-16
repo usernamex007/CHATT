@@ -1,5 +1,6 @@
 import os
 import aiohttp
+import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatAction
@@ -45,6 +46,7 @@ async def chatbot_reply(message_text):
                 return data.get("data")
             return "मुझे जवाब नहीं मिला!"
 
+# स्टार्ट बटन और मैसेज
 @app.on_message(filters.command("start"))
 async def start(client, message):
     buttons = InlineKeyboardMarkup([
@@ -56,18 +58,37 @@ async def start(client, message):
     caption = "🙋‍♂️ **नमस्ते! मैं आपका चैटबॉट हूँ।**\nमुझसे बात करें, इमेज मंगवाएं और बहुत कुछ।"
     await message.reply_photo(photo="https://files.catbox.moe/8dtq6s.jpg", caption=caption, reply_markup=buttons)
 
+# मदद बटन और उसका जवाब
 @app.on_callback_query(filters.regex("help"))
 async def help_callback(client, callback_query):
-    help_text = "**बॉट के कमांड्स:**\n- *बोल के बताओ* — वॉइस में जवाब\n- *तस्वीर* — इमेज भेजे\n- बाकी टेक्स्ट के लिए नार्मल चैट।"
+    help_text = "**बॉट के कमांड्स:**\n- *बोल के बताओ* — वॉइस में जवाब\n- *तस्वीर* — इमेज भेजे\n- *गणना* — सीधे गणित के सवाल का जवाब\n- *जानकारी* — यूजर की जानकारी दे।"
     await callback_query.message.edit_text(help_text)
 
-@app.on_message(filters.text & ~filters.command(["start", "help"]))
-async def chatbot(client, message):
+# टेक्स्ट इनपुट पर प्रतिक्रिया देना
+@app.on_message(filters.text)
+async def handle_text_message(client, message):
     chat_id = message.chat.id
     user_message = message.text.lower()
-    await client.send_chat_action(chat_id, ChatAction.TYPING)
+    
+    # यूजर की जानकारी निकालने पर प्रतिक्रिया
+    if "इस यूजर की जानकारी निकालो" in user_message or "user info" in user_message:
+        target_user = message.reply_to_message.from_user if message.reply_to_message else message.from_user
+        info = f"**यूजर जानकारी:**\n\n- नाम: {target_user.first_name}\n- यूजर आईडी: {target_user.id}\n"
+        if target_user.username:
+            info += f"- यूजरनेम: @{target_user.username}\n"
+        await message.reply_text(info)
 
-    if any(word in user_message for word in ["photo", "image", "pic", "तस्वीर"]):
+    # मैथेमेटिकल सवाल का जवाब देना
+    elif re.search(r"(\d+)\s*[\+\-\*\/]\s*(\d+)", user_message):
+        try:
+            expression = re.sub(r"[^0-9+\-*/(). ]", "", user_message)
+            result = eval(expression)
+            await message.reply_text(f"सॉल्यूशन: `{expression}` = `{result}`")
+        except Exception as e:
+            await message.reply_text(f"कैलकुलेशन में त्रुटि: {str(e)}")
+    
+    # इमेज या सामान्य चैट प्रतिक्रिया
+    elif any(word in user_message for word in ["photo", "image", "pic", "तस्वीर"]):
         image_url = await fetch_image(user_message)
         if image_url:
             await message.reply_photo(photo=image_url)
@@ -77,9 +98,7 @@ async def chatbot(client, message):
     else:
         reply = await chatbot_reply(user_message)
         await message.reply_text(reply)
-        if any(word in user_message for word in ["बोल के बताओ", "आवाज़ में बताओ", "voice में बताओ"]):
-            await send_voice_reply(message, reply)
         await save_history(chat_id, user_message, reply)
 
-print("Bot Started with Start Buttons, History, Images & Conditional Voice!")
+print("Bot Started with Start Buttons, Help, User Info, and Math Calculation!")
 app.run()
